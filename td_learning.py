@@ -2,6 +2,7 @@ import numpy as np
 import random
 import pickle
 import os
+import matplotlib.pyplot as plt
 from datetime import datetime
 from simulation import simulate
 from base_model import Model
@@ -15,9 +16,9 @@ class TDLearningModel(Model):
 
     def __init__(
         self,
-        learning_rate=0.1,
+        learning_rate=0.01,
         discount_factor=0.9,
-        exploration_rate=0.2,
+        exploration_rate=0.02,
         exploration_decay=0.999,
         min_exploration_rate=0.01,
     ):
@@ -201,7 +202,7 @@ class TDLearningModel(Model):
         print(f"Model loaded from {filename}")
 
 
-def train_model(episodes=100, ticks_per_episode=36000, save_interval=10):
+def train_model(episodes=100, ticks_per_episode=36000, save_interval=1):
     """
     Train the TD learning model using the traffic simulation.
 
@@ -273,6 +274,9 @@ def train_model(episodes=100, ticks_per_episode=36000, save_interval=10):
     # Save the final model
     model.save_model(f"models/td_model_final.pkl")
 
+    # Plot the rewards history
+    plot_rewards(rewards_history)
+
     # Print training summary
     print("\nTraining completed!")
     print(f"Final exploration rate: {model.exploration_rate:.4f}")
@@ -338,6 +342,43 @@ def run_trained_model(model_path):
     print(f"Running model {model_path} in simulation")
     reward = simulate(model, TRAINING=False, TICKS_PER_SECOND=60)
     print(f"Simulation completed with reward: {reward}")
+
+
+def plot_rewards(rewards_history):
+    """
+    Plot the rewards over episodes to visualize training progress.
+
+    Args:
+        rewards_history: List of rewards from each training episode
+    """
+    # Create directory for plots if it doesn't exist
+    if not os.path.exists("plots"):
+        os.makedirs("plots")
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(1, len(rewards_history) + 1), rewards_history, marker="o")
+    plt.title("Reward Progress During Training")
+    plt.xlabel("Episode")
+    plt.ylabel("Total Reward")
+    plt.grid(True)
+
+    # Add a smoothed trend line (moving average)
+    if len(rewards_history) > 5:
+        window_size = min(5, len(rewards_history) // 5)
+        smoothed = np.convolve(
+            rewards_history, np.ones(window_size) / window_size, mode="valid"
+        )
+        plt.plot(
+            range(window_size, len(rewards_history) + 1), smoothed, "r-", linewidth=2
+        )
+
+    # Save the plot
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    plt.savefig(f"plots/rewards_plot_{timestamp}.png")
+    print(f"Rewards plot saved to plots/rewards_plot_{timestamp}.png")
+
+    # Show the plot (comment this out for headless environments)
+    plt.show()
 
 
 if __name__ == "__main__":
