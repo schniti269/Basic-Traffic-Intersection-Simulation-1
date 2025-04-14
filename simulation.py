@@ -414,11 +414,22 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         if not TRAINING:
             screen.blit(background, (0, 0))  # display background in simulation
             # render the signals
-            for i in range(0, noOfSignals):
-                if signals[i].red > 0:
-                    screen.blit(redSignal, signalCoods[i])
-                elif signals[i].green > 0:
-                    screen.blit(greenSignal, signalCoods[i])
+            if northGreen == 1:
+                screen.blit(greenSignal, signalCoods[1])
+            else:
+                screen.blit(redSignal, signalCoods[1])
+            if southGreen == 1:
+                screen.blit(greenSignal, signalCoods[3])
+            else:
+                screen.blit(redSignal, signalCoods[3])
+            if westGreen == 1:
+                screen.blit(greenSignal, signalCoods[0])
+            else:
+                screen.blit(redSignal, signalCoods[0])
+            if eastGreen == 1:
+                screen.blit(greenSignal, signalCoods[2])
+            else:
+                screen.blit(redSignal, signalCoods[2])
 
             # display the co2 emission and crossed vehicles
             co2_emission_text = font.render(
