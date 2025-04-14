@@ -7,7 +7,6 @@ pygame.init()
 simulation = pygame.sprite.Group()
 
 
-TRAINING = False  # Set to True for training mode
 SHOW_FPS = False  # Set to True to show frames per second
 TICKS_PER_SECOND = 1000000000  # Ticks per second in the simulation (simulation speed)
 VEHICLE_SPAWN_INTERVAL = 30  # Spawn vehicle every 60 ticks (1 second)
@@ -324,8 +323,7 @@ def calculate_reward(co2, crossed):
     return reward
 
 
-class Main:
-
+def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 10):
     # Initialize traffic signals
     initialize()
     # Setting background image i.e. image of intersection
@@ -347,7 +345,7 @@ class Main:
     crossed_vehicles = 0
     co2_emission = 0
 
-    while True:
+    while tick_count < NO_OF_TICKS or not TRAINING:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
@@ -434,6 +432,18 @@ class Main:
             pygame.display.update()
 
         clock.tick(TICKS_PER_SECOND)
+
+    # do a post run cleanup by teleporting all vehicles off map and running cleanup_vehicles
+    # so that the vehicles are removed from the simulation
+    for vehicle in simulation:
+        vehicle.x = -1000
+        vehicle.y = -1000
+
+    cleanup_vehicles(crossed_vehicles, co2_emission)
+
+    reward = calculate_reward(co2_emission, crossed_vehicles)
+
+    return reward
 
 
 if __name__ == "__main__":
