@@ -20,6 +20,7 @@ class Model:
         raise NotImplementedError("Subclasses must implement get_action method")
 
 
+# example of a model that flips its state every 400 ticks
 class FlippingModel(Model):
     """
     A simple model that flips its state every 400 ticks.
