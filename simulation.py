@@ -10,7 +10,7 @@ from traffic_signal import TrafficSignal, update_traffic_lights_Values
 
 SHOW_FPS = False  # Set to True to show frames per second
 TICKS_PER_SECOND = 1000000000  # Ticks per second in the simulation (simulation speed)
-VEHICLE_SPAWN_INTERVAL = 30  # Spawn vehicle every 60 ticks (1 second)
+VEHICLE_SPAWN_INTERVAL = 10  # Spawn vehicle every 60 ticks (1 second)
 ALL_RED_STATE_N_TICKS = 60  # Duration of all red state in ticks
 # rewardparams
 REWARD_CO2_MULTIPLIER = 1  # Multiplier for CO2 emission in reward calculation

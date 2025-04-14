@@ -64,3 +64,92 @@ Mihir Gandhi - [mihir-m-gandhi](https://github.com/mihir-m-gandhi)
 ------------------------------------------
 ### License
 This project is licensed under the MIT - see the [LICENSE](./LICENSE) file for details.
+
+# Traffic Intersection Simulation
+
+This project simulates a traffic intersection with AI-controlled traffic lights. The goal is to optimize traffic flow and minimize CO2 emissions.
+
+## Project Structure
+
+- `simulation.py`: Main simulation logic for traffic and visualization
+- `simulation_config.py`: Configuration parameters for the simulation
+- `base_model.py`: Base class for traffic control models
+- `td_learning.py`: TD Learning model for traffic control
+- `advanced_traffic_agent.py`: Advanced Deep Q-Learning model for traffic control
+- `run_advanced_agent.py`: CLI tool to train and run the advanced agent
+- `vehicle.py`: Vehicle class and related functions
+- `traffic_signal.py`: Traffic signal implementation
+
+## Installation
+
+```bash
+# Install required dependencies
+pip install -r requirements.txt
+```
+
+## Running the Simulation
+
+### Basic Simulation
+
+```bash
+python simulation.py
+```
+
+### Advanced Deep Q-Learning Agent
+
+The project includes an advanced Deep Q-Learning agent with neural networks for traffic control.
+
+#### Train a new agent
+
+```bash
+python run_advanced_agent.py train --episodes 100 --ticks 36000 --save-interval 10
+```
+
+#### Evaluate a trained agent
+
+```bash
+python run_advanced_agent.py evaluate --model-path models/advanced_agent_final.pt --num-evals 5
+```
+
+#### Run simulation with a trained agent
+
+```bash
+python run_advanced_agent.py simulate --model-path models/advanced_agent_final.pt --ticks-per-second 60
+```
+
+## Agent Types
+
+### Flipping Model (Base Implementation)
+A simple model that alternates traffic light states at fixed intervals.
+
+### TD Learning Model
+A model that uses Temporal Difference learning to optimize traffic flow.
+
+### Advanced Deep Q-Learning Agent
+The most advanced model using:
+- Deep Q-Learning with neural networks
+- Experience replay buffer for efficient learning
+- Target network for stable updates
+- Batch normalization and dropout for better generalization
+- Traffic pattern analysis
+- Detailed state representation
+
+## Customization
+
+The advanced agent can be customized with various hyperparameters:
+
+```bash
+python run_advanced_agent.py train --learning-rate 0.001 --gamma 0.99 --epsilon 1.0 --epsilon-decay 0.995 --min-epsilon 0.05 --batch-size 64 --action-duration 300
+```
+
+## Performance Tracking
+
+The advanced agent tracks and plots:
+- Loss over training
+- Rewards per episode
+- Exploration rate changes
+- Traffic patterns
+
+## License
+
+This project is open source under the MIT license.
