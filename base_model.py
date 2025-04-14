@@ -28,7 +28,7 @@ class FlippingModel(Model):
 
     def __init__(self):
         super().__init__()
-        self.tick_counter = 0
+        self.tick_counter = 400
         self.current_state = True  # Start with north-south green
 
     def get_action(self, state, history):
