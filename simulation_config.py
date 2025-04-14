@@ -12,11 +12,19 @@ nextGreen = (
 currentYellow = 0  # Indicates whether yellow signal is on or off
 
 speeds = {
-    "car": 2.25,
-    "bus": 1.8,
-    "truck": 1.8,
-    "bike": 2.5,
+    "car": 3,
+    "bus": 3,
+    "truck": 3,
+    "bike": 3,
 }  # average speeds of vehicles
+
+# CO2 emission values for vehicles (in arbitrary units)
+co2_emissions = {
+    "car": {"stopping": 10, "acceleration": 15, "waiting": 2},
+    "bus": {"stopping": 25, "acceleration": 30, "waiting": 4},
+    "truck": {"stopping": 30, "acceleration": 35, "waiting": 5},
+    "bike": {"stopping": 3, "acceleration": 5, "waiting": 1},
+}
 
 # Coordinates of vehicles' start
 x = {
@@ -53,3 +61,30 @@ defaultStop = {"right": 580, "down": 320, "left": 810, "up": 545}
 # Gap between vehicles
 stoppingGap = 15  # stopping gap
 movingGap = 15  # moving gap
+
+
+SCREEN_BOUNDS = {"left": -200, "right": 1600, "top": -200, "bottom": 1000}
+
+# Ursprüngliche Startpositionen speichern
+original_x = {
+    "right": [0, 0, 0],
+    "down": [755, 727, 697],
+    "left": [1400, 1400, 1400],
+    "up": [602, 627, 657],
+}
+original_y = {
+    "right": [348, 370, 398],
+    "down": [0, 0, 0],
+    "left": [498, 466, 436],
+    "up": [800, 800, 800],
+}
+
+
+# Colours
+black = (0, 0, 0)
+white = (255, 255, 255)
+
+# Screensize
+screenWidth = 1400
+screenHeight = 800
+screenSize = (screenWidth, screenHeight)
