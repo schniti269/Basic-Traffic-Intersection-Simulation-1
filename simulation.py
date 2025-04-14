@@ -315,8 +315,37 @@ def calculate_reward(co2, crossed):
 
 
 def get_state(vehicles):
+    # Ergebnis-Dictionary für alle Scan-Zonen initialisieren
+    result = {
+        "right": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
+        "left": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
+        "down": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
+        "up": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
+    }
 
-    return vehicles
+    # Für jede Scan-Zone prüfen, ob das Fahrzeug darin liegt
+    for direction, config in DEFAULT_SCAN_ZONE_CONFIG.items():
+        zone = config["zone"]
+        zone_rect = pygame.Rect(
+            zone["x1"], zone["y1"], zone["x2"] - zone["x1"], zone["y2"] - zone["y1"]
+        )
+
+        # Für jedes Fahrzeug in der Simulation
+        for vehicle in vehicles:
+            # Fahrzeugdimensionen bestimmen (Rechteck)
+            vehicle_rect = pygame.Rect(
+                vehicle.x,
+                vehicle.y,
+                vehicle.image.get_rect().width,
+                vehicle.image.get_rect().height,
+            )
+
+            # Überprüfen, ob das Fahrzeug mit der Zone überlappt
+            if vehicle_rect.colliderect(zone_rect):
+                # Fahrzeugklasse zählen
+                result[direction][vehicle.vehicleClass] += 1
+
+    return result
 
 
 def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 10):
@@ -378,7 +407,7 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         # get a vectorized state of the current simulation state
         state = get_state(simulation)
         # get the controller output from the model
-        controller_output = contr  # Model.get_action(state, output_hist)
+        controller_output = Model.get_action(state, output_hist)
         output_hist.append(controller_output)
         (
             northGreen,
