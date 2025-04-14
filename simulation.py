@@ -2,7 +2,7 @@ import random
 import pygame
 import sys
 from simulation_config import *
-from model import FlippingModel
+from base_model import FlippingModel
 
 
 SHOW_FPS = False  # Set to True to show frames per second
