@@ -10,6 +10,7 @@ simulation = pygame.sprite.Group()
 SHOW_FPS = False  # Set to True to show frames per second
 TICKS_PER_SECOND = 1000000000  # Ticks per second in the simulation (simulation speed)
 VEHICLE_SPAWN_INTERVAL = 30  # Spawn vehicle every 60 ticks (1 second)
+ALL_RED_STATE_N_TICKS = 60  # Duration of all red state in ticks
 # rewardparams
 REWARD_CO2_MULTIPLIER = 1  # Multiplier for CO2 emission in reward calculation
 REWARD_CROSSED_MULTIPLIER = 130  # Multiplier for crossed vehicles in reward calculation
@@ -69,24 +70,21 @@ def cleanup_vehicles(this_crossed_vehicles, this_unnecessary_co2_emission):
 
 
 class TrafficSignal:
-    def __init__(self, red, yellow, green):
+    def __init__(self, red, green):
         self.red = red
-        self.yellow = yellow
         self.green = green
         self.signalText = ""
 
 
 # Initialization of signals with default values
 def initialize():
-    ts1 = TrafficSignal(0, defaultYellow, defaultGreen[0])
+    ts1 = TrafficSignal(0, defaultGreen[0])
     signals.append(ts1)
-    ts2 = TrafficSignal(
-        ts1.red + ts1.yellow + ts1.green, defaultYellow, defaultGreen[1]
-    )
+    ts2 = TrafficSignal(ts1.red + ts1.green, defaultGreen[1])
     signals.append(ts2)
-    ts3 = TrafficSignal(defaultRed, defaultYellow, defaultGreen[2])
+    ts3 = TrafficSignal(defaultRed, defaultGreen[2])
     signals.append(ts3)
-    ts4 = TrafficSignal(defaultRed, defaultYellow, defaultGreen[3])
+    ts4 = TrafficSignal(defaultRed, defaultGreen[3])
     signals.append(ts4)
 
 
@@ -165,7 +163,7 @@ class Vehicle(pygame.sprite.Sprite):
         )
         screen.blit(vehicle_counter, (self.x, self.y))
 
-    def move(self):
+    def move(self, northGreen, eastGreen, southGreen, westGreen):
         # Speichern des vorherigen Bewegungsstatus
         self.was_moving_previous_tick = self.is_moving
         # Standardmäßig auf "nicht bewegt" setzen und später aktualisieren wenn nötig
@@ -180,7 +178,7 @@ class Vehicle(pygame.sprite.Sprite):
             if (
                 self.x + self.image.get_rect().width <= self.stop
                 or self.crossed == 1
-                or (currentGreen == 0 and currentYellow == 0)
+                or (westGreen == 1)
             ) and (
                 self.index == 0
                 or self.x + self.image.get_rect().width
@@ -198,7 +196,7 @@ class Vehicle(pygame.sprite.Sprite):
             if (
                 self.y + self.image.get_rect().height <= self.stop
                 or self.crossed == 1
-                or (currentGreen == 1 and currentYellow == 0)
+                or (northGreen == 1)
             ) and (
                 self.index == 0
                 or self.y + self.image.get_rect().height
@@ -209,11 +207,7 @@ class Vehicle(pygame.sprite.Sprite):
         elif self.direction == "left":
             if self.crossed == 0 and self.x < stopLines[self.direction]:
                 self.crossed = 1
-            if (
-                self.x >= self.stop
-                or self.crossed == 1
-                or (currentGreen == 2 and currentYellow == 0)
-            ) and (
+            if (self.x >= self.stop or self.crossed == 1 or (eastGreen == 1)) and (
                 self.index == 0
                 or self.x
                 > (
@@ -229,11 +223,7 @@ class Vehicle(pygame.sprite.Sprite):
         elif self.direction == "up":
             if self.crossed == 0 and self.y < stopLines[self.direction]:
                 self.crossed = 1
-            if (
-                self.y >= self.stop
-                or self.crossed == 1
-                or (currentGreen == 3 and currentYellow == 0)
-            ) and (
+            if (self.y >= self.stop or self.crossed == 1 or (southGreen == 1)) and (
                 self.index == 0
                 or self.y
                 > (
@@ -270,38 +260,51 @@ class Vehicle(pygame.sprite.Sprite):
             # wenn das fahrzeug steht wird es später wieder beschleunigt also werden die emissionswerte für beschleunigung nicht hinzugefügt
 
 
-# Update values of the signal timers after every tick this will later be AI
-def update_traffic_lights_Values():
-    global currentGreen, currentYellow, nextGreen
+# Update values of the signal timers after every tick
+def update_traffic_lights_Values(
+    north_south_green, last_north_south_green, swtich_time, is_swtiching
+):
+    westGreen = 0
+    eastGreen = 0
+    southGreen = 0
+    northGreen = 0
+    if north_south_green != last_north_south_green:
+        # initialize a signal switch
+        swtich_time = 0
+        is_swtiching = True
+        # if the signal is switching, set the si#gnal to red for ALL the signals
+        westGreen = 0
+        eastGreen = 0
+        southGreen = 0
+        northGreen = 0
 
-    for i in range(0, noOfSignals):
-        if i == currentGreen:
-            if currentYellow == 0:
-                signals[i].green -= 1
-                if signals[i].green == 0:
-                    currentYellow = 1
-                    # Reset stop coordinates of lanes and vehicles
-                    for j in range(0, 3):
-                        for vehicle in vehicles[directionNumbers[currentGreen]][j]:
-                            vehicle.stop = defaultStop[directionNumbers[currentGreen]]
-            else:
-                signals[i].yellow -= 1
-                if signals[i].yellow == 0:
-                    currentYellow = 0
-                    # Reset all signal times of current signal to default times
-                    signals[i].green = defaultGreen[i]
-                    signals[i].yellow = defaultYellow
-                    signals[i].red = defaultRed
+    if is_swtiching:
+        # if the signal is switching, increment the switch time
+        swtich_time += 1
+        if swtich_time >= ALL_RED_STATE_N_TICKS:
+            if north_south_green:
+                # swithc the signal to green for north south direction
+                northGreen = 1
+                southGreen = 1
+                westGreen = 0
+                eastGreen = 0
 
-                    currentGreen = nextGreen  # Set next signal as green signal
-                    nextGreen = (
-                        currentGreen + 1
-                    ) % noOfSignals  # Set next green signal
-                    signals[nextGreen].red = (
-                        signals[currentGreen].yellow + signals[currentGreen].green
-                    )  # Set the red time of next to next signal as (yellow time + green time) of next signal
-        else:
-            signals[i].red -= 1
+            if not north_south_green:
+                # swithc the signal to green for east west direction
+                northGreen = 0
+                southGreen = 0
+                westGreen = 1
+                eastGreen = 1
+
+    return (
+        northGreen,
+        eastGreen,
+        southGreen,
+        westGreen,
+        north_south_green,
+        swtich_time,
+        is_swtiching,
+    )
 
 
 # Generate a new vehicle based on simulation parameters
@@ -334,9 +337,12 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
 
     # Loading signal images and font
     redSignal = pygame.image.load("images/signals/red.png")
-    yellowSignal = pygame.image.load("images/signals/yellow.png")
     greenSignal = pygame.image.load("images/signals/green.png")
     font = pygame.font.Font(None, 30)
+
+    last_signal_state = True
+    is_swtiching = False
+    switch_time = 0
 
     clock = pygame.time.Clock()
     tick_count = 0
@@ -345,11 +351,19 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
     crossed_vehicles = 0
     co2_emission = 0
 
+    contr = True
+
     while tick_count < NO_OF_TICKS or not TRAINING:
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
 
+        # all 400 ticks switch the signal state
+        if tick_count % 400 == 0:
+            contr = not contr
+
+        print("CONTROLER: ", contr)
         # show fps
         if SHOW_FPS:
             print("FPS: ", clock.get_fps())
@@ -361,7 +375,17 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         # get the predicted action from the AI model
         # predicted_action = get_action(vectorized_state)
         # Update the signals based on AI logic
-        update_traffic_lights_Values()
+        (
+            northGreen,
+            eastGreen,
+            southGreen,
+            westGreen,
+            last_signal_state,
+            switch_time,
+            is_swtiching,
+        ) = update_traffic_lights_Values(
+            contr, last_signal_state, switch_time, is_swtiching
+        )
 
         """
         SIMULATION LOGIC
@@ -373,7 +397,7 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
 
         # Move all vehicles
         for vehicle in simulation:
-            vehicle.move()
+            vehicle.move(northGreen, eastGreen, southGreen, westGreen)
 
         # Cleanup vehicles that have left the screen
         crossed_vehicles, co2_emission = cleanup_vehicles(
@@ -389,30 +413,13 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         # Rendering
         if not TRAINING:
             screen.blit(background, (0, 0))  # display background in simulation
-            for i in range(
-                0, noOfSignals
-            ):  # display signal and set timer according to current status: green, yellow, or red
-                if i == currentGreen:
-                    if currentYellow == 1:
-                        signals[i].signalText = signals[i].yellow
-                        screen.blit(yellowSignal, signalCoods[i])
-                    else:
-                        signals[i].signalText = signals[i].green
-                        screen.blit(greenSignal, signalCoods[i])
-                else:
-                    if signals[i].red <= 10:
-                        signals[i].signalText = signals[i].red
-                    else:
-                        signals[i].signalText = "---"
-                    screen.blit(redSignal, signalCoods[i])
-            signalTexts = ["", "", "", ""]
-
-            # display signal timer
+            # render the signals
             for i in range(0, noOfSignals):
-                signalTexts[i] = font.render(
-                    str(signals[i].signalText), True, white, black
-                )
-                screen.blit(signalTexts[i], signalTimerCoods[i])
+                if signals[i].red > 0:
+                    screen.blit(redSignal, signalCoods[i])
+                elif signals[i].green > 0:
+                    screen.blit(greenSignal, signalCoods[i])
+
             # display the co2 emission and crossed vehicles
             co2_emission_text = font.render(
                 "CO2 Emission: " + str(co2_emission), True, white, black
