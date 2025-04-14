@@ -6,6 +6,8 @@ from simulation_config import *
 from base_model import FlippingModel
 from vehicle import Vehicle, generateVehicle, cleanup_vehicles
 from traffic_signal import TrafficSignal, update_traffic_lights_Values
+import numpy as np
+from state_compressor import StateCompressor
 
 
 SHOW_FPS = False  # Set to True to show frames per second
@@ -16,6 +18,9 @@ ALL_RED_STATE_N_TICKS = 60  # Duration of all red state in ticks
 REWARD_CO2_MULTIPLIER = 1  # Multiplier for CO2 emission in reward calculation
 REWARD_CROSSED_MULTIPLIER = 90  # Multiplier for crossed vehicles in reward calculation
 # Bildschirmgrenzen mit zusätzlichem Puffer definieren
+
+# Initialize the state compressor
+state_compressor = StateCompressor()
 
 
 def calculate_reward(co2, crossed):
@@ -58,7 +63,127 @@ def get_state(vehicles):
     return result
 
 
-def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 10):
+def get_state_advanced(vehicles):
+    """
+    Get a vectorized state of the current simulation state using the state compressor.
+    If no trained compressor is available, this will collect data for future training.
+
+    Args:
+        vehicles: List of vehicles in the simulation
+
+    Returns:
+        Compressed state vector if a model is trained, otherwise the raw state vector
+    """
+    # Extract detailed state information
+    state_data = []
+
+    # For each zone, extract vehicle counts by type
+    for direction, config in DEFAULT_SCAN_ZONE_CONFIG.items():
+        zone = config["zone"]
+        zone_rect = pygame.Rect(
+            zone["x1"], zone["y1"], zone["x2"] - zone["x1"], zone["y2"] - zone["y1"]
+        )
+
+        # Initialize counts for this zone
+        car_count = 0
+        bus_count = 0
+        truck_count = 0
+        bike_count = 0
+        total_speed = 0
+        vehicle_count = 0
+        min_distance = float("inf")
+
+        # Check each vehicle
+        for vehicle in vehicles:
+            vehicle_rect = pygame.Rect(
+                vehicle.x,
+                vehicle.y,
+                vehicle.image.get_rect().width,
+                vehicle.image.get_rect().height,
+            )
+
+            # If vehicle is in this zone
+            if vehicle_rect.colliderect(zone_rect):
+                # Count by type
+                if vehicle.vehicleClass == "car":
+                    car_count += 1
+                elif vehicle.vehicleClass == "bus":
+                    bus_count += 1
+                elif vehicle.vehicleClass == "truck":
+                    truck_count += 1
+                elif vehicle.vehicleClass == "bike":
+                    bike_count += 1
+
+                # Calculate average speed
+                total_speed += vehicle.speed
+                vehicle_count += 1
+
+                # Calculate distance to intersection center (400, 400)
+                intersection_center = (400, 400)
+                vehicle_center = (
+                    vehicle.x + vehicle_rect.width / 2,
+                    vehicle.y + vehicle_rect.height / 2,
+                )
+                distance = (
+                    (vehicle_center[0] - intersection_center[0]) ** 2
+                    + (vehicle_center[1] - intersection_center[1]) ** 2
+                ) ** 0.5
+
+                if distance < min_distance:
+                    min_distance = distance
+
+        # Average speed (avoid division by zero)
+        avg_speed = total_speed / vehicle_count if vehicle_count > 0 else 0
+
+        # If no vehicles found, set minimum distance to a large value
+        if min_distance == float("inf"):
+            min_distance = 1000
+
+        # Add features for this zone to state vector
+        state_data.extend(
+            [car_count, bus_count, truck_count, bike_count, avg_speed, min_distance]
+        )
+
+    # Always collect data for potential future training
+    state_compressor.collect_state(state_data)
+
+    # If we have a trained model, use it to compress the state
+    if state_compressor.is_ready():
+        compressed_state = state_compressor.encode(state_data)
+        if compressed_state is not None:
+            return compressed_state
+
+    # If no model is available or encoding failed, return the raw state
+    return state_data
+
+
+def train_pca_compressor(collected_data):
+    """
+    DEPRECATED: This is now handled by state_compressor.py
+    This function remains for backwards compatibility.
+    """
+    print(
+        "Warning: train_pca_compressor is deprecated. Use state_compressor.py instead."
+    )
+    return None
+
+
+def train_autoencoder(collected_data):
+    """
+    DEPRECATED: This is now handled by state_compressor.py
+    This function remains for backwards compatibility.
+    """
+    print("Warning: train_autoencoder is deprecated. Use state_compressor.py instead.")
+    return None
+
+
+def simulate(
+    Model,
+    TRAINING=False,
+    TICKS_PER_SECOND=60,
+    NO_OF_TICKS=60 * 60 * 10,
+    USE_ADVANCED_STATE=False,
+):
     pygame.init()
     simulation = pygame.sprite.Group()
     # Initialize traffic signals
@@ -119,7 +244,24 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         AI Traffic light LOGIC
         """
         # get a vectorized state of the current simulation state
-        state = get_state(simulation)
+        if USE_ADVANCED_STATE:
+            state_vector = get_state_advanced(simulation)
+            # If we're not in training mode, print the state vector size
+            if tick_count % 100 == 0 and not TRAINING:
+                print(f"Using advanced state vector of size: {len(state_vector)}")
+
+            # We need to convert the state vector back to the expected format
+            # The model expects a dict with directions and vehicle types
+            # Create a simplified state compatible with the existing model
+            state = {
+                "right": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
+                "left": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
+                "down": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
+                "up": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
+            }
+        else:
+            state = get_state(simulation)
+
         # get the controller output from the model
         controller_output = Model.get_action(state, output_hist)
         output_hist.append(controller_output)
@@ -226,6 +368,15 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
             reward_text = font.render(f"Reward: {reward:.2f}", True, white, black)
             screen.blit(reward_text, (10, 70))
 
+            # Display state representation mode
+            state_mode_text = font.render(
+                f"State Mode: {'Advanced' if USE_ADVANCED_STATE else 'Basic'}",
+                True,
+                white,
+                black,
+            )
+            screen.blit(state_mode_text, (10, 100))
+
             # display the vehicles
             for vehicle in simulation:
                 vehicle.render(screen)
@@ -297,11 +448,30 @@ if __name__ == "__main__":
 
     # Create and load the model
     my_model = TDLearningModel()
-    my_model.load_model(
-        r"C:\Users\ian-s\Traffic_refactor\Basic-Traffic-Intersection-Simulation\models\td_model_final.pkl"
+
+    # Option 1: Load a pre-trained model
+    try:
+        my_model.load_model(
+            r"C:\Users\ian-s\Traffic_refactor\Basic-Traffic-Intersection-Simulation\models\td_model_final.pkl"
+        )
+        # For evaluation, set exploration rate to 0
+        my_model.exploration_rate = 0.0
+    except:
+        print("No pre-trained model found. Training new model...")
+
+    # Run the simulation with the advanced state representation
+    # First, set a flag to use the advanced state representation if needed
+    # This flag will be checked in the simulate function
+    use_advanced_state = True
+
+    # Run the simulation
+    reward = simulate(
+        my_model,
+        TRAINING=False,
+        TICKS_PER_SECOND=600,
+        USE_ADVANCED_STATE=use_advanced_state,
     )
+    print(f"Simulation completed with reward: {reward}")
 
-    # For evaluation, set exploration rate to 0
-    my_model.exploration_rate = 0.0
-
-    simulate(my_model, TRAINING=False, TICKS_PER_SECOND=600)
+    # Training the state compressor can be done separately using:
+    # python state_compressor.py --train
