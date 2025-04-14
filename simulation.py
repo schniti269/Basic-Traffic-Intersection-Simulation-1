@@ -447,4 +447,5 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
 
 
 if __name__ == "__main__":
-    Main()
+    # Run the simulation
+    simulate(None)
