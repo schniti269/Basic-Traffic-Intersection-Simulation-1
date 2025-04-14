@@ -1,6 +1,7 @@
 import random
 import pygame
 import sys
+import time
 from simulation_config import *
 from base_model import FlippingModel
 from vehicle import Vehicle, generateVehicle, cleanup_vehicles
@@ -93,6 +94,18 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
     crossed_vehicles = 0
     co2_emission = 0
 
+    # Performance tracking
+    start_time = time.time()
+    last_update_time = start_time
+    frames_since_last_update = 0
+    iters_per_second = 0
+
+    # Progress tracking for training mode
+    progress_update_interval = 1000  # Update progress every 1000 ticks
+
+    # Set unlimited speed for training mode
+    actual_ticks_per_second = float("inf") if TRAINING else TICKS_PER_SECOND
+
     while tick_count < NO_OF_TICKS or not TRAINING:
 
         for event in pygame.event.get():
@@ -131,6 +144,36 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         """
         # Generate vehicles based on tick count
         tick_count += 1
+
+        # Update performance metrics
+        frames_since_last_update += 1
+        current_time = time.time()
+        time_elapsed = current_time - last_update_time
+
+        # Calculate and display progress for training mode
+        if TRAINING and (
+            tick_count % progress_update_interval == 0 or tick_count == NO_OF_TICKS
+        ):
+            progress_percent = (tick_count / NO_OF_TICKS) * 100
+            iters_per_second = (
+                frames_since_last_update / time_elapsed if time_elapsed > 0 else 0
+            )
+
+            # Create progress bar
+            bar_length = 30
+            filled_length = int(bar_length * tick_count // NO_OF_TICKS)
+            bar = "#" * filled_length + "-" * (bar_length - filled_length)
+
+            # Print progress information
+            print(
+                f"\rProgress: |{bar}| {progress_percent:.1f}% - Iterations/sec: {iters_per_second:.1f}",
+                end="",
+            )
+
+            # Reset counters for next update
+            last_update_time = current_time
+            frames_since_last_update = 0
+
         if tick_count % VEHICLE_SPAWN_INTERVAL == 0:
             generateVehicle(simulation)
 
@@ -219,7 +262,19 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
                 screen.blit(direction_label, (camera["x"] - 15, camera["y"] - 15))
             pygame.display.update()
 
-        clock.tick(TICKS_PER_SECOND)
+        # Use unlimited FPS during training, or the specified TICKS_PER_SECOND otherwise
+        clock.tick(actual_ticks_per_second)
+
+    # Print a newline after training progress display
+    if TRAINING:
+        print()  # Add a newline after the progress bar
+
+        # Calculate and display final statistics
+        total_time = time.time() - start_time
+        avg_iters_per_second = tick_count / total_time if total_time > 0 else 0
+        print(f"Training completed in {total_time:.2f} seconds")
+        print(f"Average iterations per second: {avg_iters_per_second:.1f}")
+        print(f"Final reward: {reward:.2f}")
 
     # do a post run cleanup by teleporting all vehicles off map and running cleanup_vehicles
     # so that the vehicles are removed from the simulation
@@ -227,7 +282,9 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         vehicle.x = -1000
         vehicle.y = -1000
 
-    cleanup_vehicles(crossed_vehicles, co2_emission)
+    crossed_vehicles, co2_emission = cleanup_vehicles(
+        crossed_vehicles, co2_emission, simulation
+    )
 
     reward = calculate_reward(co2_emission, crossed_vehicles)
 
@@ -236,5 +293,15 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
 
 if __name__ == "__main__":
     # Run the simulation
-    my_model = FlippingModel()
-    simulate(my_model, TRAINING=False, TICKS_PER_SECOND=60)
+    from td_learning import TDLearningModel
+
+    # Create and load the model
+    my_model = TDLearningModel()
+    my_model.load_model(
+        r"C:\Users\ian-s\Traffic_refactor\Basic-Traffic-Intersection-Simulation\models\td_model_final.pkl"
+    )
+
+    # For evaluation, set exploration rate to 0
+    my_model.exploration_rate = 0.0
+
+    simulate(my_model, TRAINING=False, TICKS_PER_SECOND=600)

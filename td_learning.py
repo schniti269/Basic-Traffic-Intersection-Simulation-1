@@ -222,17 +222,41 @@ def train_model(episodes=100, ticks_per_episode=36000, save_interval=10):
     # Track rewards for evaluation
     rewards_history = []
 
+    # Track overall training progress
+    total_start_time = datetime.now()
+
     print(f"Starting training for {episodes} episodes")
     for episode in range(1, episodes + 1):
+        # Calculate overall progress
+        overall_progress = ((episode - 1) / episodes) * 100
+
+        # Create overall progress bar
+        bar_length = 20
+        filled_length = int(bar_length * (episode - 1) // episodes)
+        progress_bar = "#" * filled_length + "-" * (bar_length - filled_length)
+
+        print(f"\nOverall progress: |{progress_bar}| {overall_progress:.1f}%")
         print(f"Episode {episode}/{episodes}")
+        episode_start_time = datetime.now()
 
         # Run one episode of simulation
         reward = simulate(
-            model, TRAINING=True, TICKS_PER_SECOND=60, NO_OF_TICKS=ticks_per_episode
+            model,
+            TRAINING=True,
+            TICKS_PER_SECOND=float("inf"),
+            NO_OF_TICKS=ticks_per_episode,
         )
         rewards_history.append(reward)
 
+        episode_duration = (datetime.now() - episode_start_time).total_seconds()
+
+        # Calculate estimated time remaining
+        avg_episode_time = (datetime.now() - total_start_time).total_seconds() / episode
+        est_time_remaining = avg_episode_time * (episodes - episode)
+
         print(f"Episode {episode} completed with reward: {reward}")
+        print(f"Episode duration: {episode_duration:.2f} seconds")
+        print(f"Estimated time remaining: {est_time_remaining/60:.2f} minutes")
 
         # Decay exploration rate
         model.decay_exploration_rate()
@@ -241,6 +265,10 @@ def train_model(episodes=100, ticks_per_episode=36000, save_interval=10):
         # Save model periodically
         if episode % save_interval == 0:
             model.save_model(f"models/td_model_episode_{episode}.pkl")
+
+    # Print total training time
+    total_duration = (datetime.now() - total_start_time).total_seconds()
+    print(f"\nTotal training time: {total_duration/60:.2f} minutes")
 
     # Save the final model
     model.save_model(f"models/td_model_final.pkl")
