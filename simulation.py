@@ -2,6 +2,7 @@ import random
 import pygame
 import sys
 from simulation_config import *
+from model import FlippingModel
 
 
 SHOW_FPS = False  # Set to True to show frames per second
@@ -384,19 +385,11 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
     crossed_vehicles = 0
     co2_emission = 0
 
-    contr = True
-
     while tick_count < NO_OF_TICKS or not TRAINING:
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
-
-        # all 400 ticks switch the signal state
-        if tick_count % 400 == 0:
-            contr = not contr
-
-        #
 
         # show fps
         if SHOW_FPS:
@@ -531,4 +524,5 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
 
 if __name__ == "__main__":
     # Run the simulation
-    simulate(None)
+    my_model = FlippingModel()
+    simulate(my_model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 10)
