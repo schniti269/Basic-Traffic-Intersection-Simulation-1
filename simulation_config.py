@@ -19,10 +19,10 @@ speeds = {
 
 # CO2 emission values for vehicles (in arbitrary units)
 co2_emissions = {
-    "car": {"stopping": 10, "acceleration": 15, "waiting": 2},
-    "bus": {"stopping": 25, "acceleration": 30, "waiting": 4},
-    "truck": {"stopping": 30, "acceleration": 35, "waiting": 5},
-    "bike": {"stopping": 3, "acceleration": 5, "waiting": 1},
+    "car": {"stopping": 100, "acceleration": 150, "waiting": 2},
+    "bus": {"stopping": 250, "acceleration": 300, "waiting": 4},
+    "truck": {"stopping": 300, "acceleration": 350, "waiting": 5},
+    "bike": {"stopping": 30, "acceleration": 50, "waiting": 1},
 }
 
 # Coordinates of vehicles' start
