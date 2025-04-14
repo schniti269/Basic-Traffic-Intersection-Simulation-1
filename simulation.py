@@ -12,10 +12,8 @@ TICKS_PER_SECOND = 1000000000  # Ticks per second in the simulation (simulation 
 VEHICLE_SPAWN_INTERVAL = 30  # Spawn vehicle every 60 ticks (1 second)
 ALL_RED_STATE_N_TICKS = 60  # Duration of all red state in ticks
 # rewardparams
-REWARD_CO2_MULTIPLIER = 100  # Multiplier for CO2 emission in reward calculation
-REWARD_CROSSED_MULTIPLIER = (
-    1300  # Multiplier for crossed vehicles in reward calculation
-)
+REWARD_CO2_MULTIPLIER = 1  # Multiplier for CO2 emission in reward calculation
+REWARD_CROSSED_MULTIPLIER = 90  # Multiplier for crossed vehicles in reward calculation
 # Bildschirmgrenzen mit zusätzlichem Puffer definieren
 
 
