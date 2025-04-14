@@ -9,8 +9,10 @@ TICKS_PER_SECOND = 1000000000  # Ticks per second in the simulation (simulation 
 VEHICLE_SPAWN_INTERVAL = 30  # Spawn vehicle every 60 ticks (1 second)
 ALL_RED_STATE_N_TICKS = 60  # Duration of all red state in ticks
 # rewardparams
-REWARD_CO2_MULTIPLIER = 1  # Multiplier for CO2 emission in reward calculation
-REWARD_CROSSED_MULTIPLIER = 130  # Multiplier for crossed vehicles in reward calculation
+REWARD_CO2_MULTIPLIER = 100  # Multiplier for CO2 emission in reward calculation
+REWARD_CROSSED_MULTIPLIER = (
+    1300  # Multiplier for crossed vehicles in reward calculation
+)
 # Bildschirmgrenzen mit zusätzlichem Puffer definieren
 
 
@@ -144,7 +146,7 @@ class Vehicle(pygame.sprite.Sprite):
         # add a counter to the vehicle to show current unnecessary co2 emission onto the car
         font = pygame.font.Font(None, 20)
         vehicle_counter = font.render(
-            str(self.unnecessary_co2_emission), True, white, black
+            f"{self.unnecessary_co2_emission:.2f}", True, white, black
         )
         screen.blit(vehicle_counter, (self.x, self.y))
 
@@ -436,20 +438,51 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
 
             # display the co2 emission and crossed vehicles
             co2_emission_text = font.render(
-                "CO2 Emission: " + str(co2_emission), True, white, black
+                f"Co2: {co2_emission:.2f}g", True, white, black
             )
             screen.blit(co2_emission_text, (10, 10))
             crossed_vehicles_text = font.render(
-                "Crossed Vehicles: " + str(crossed_vehicles), True, white, black
+                f"Crossed Vehicles: {crossed_vehicles}", True, white, black
             )
             screen.blit(crossed_vehicles_text, (10, 40))
             # display the reward
-            reward_text = font.render("Reward: " + str(reward), True, white, black)
+            reward_text = font.render(f"Reward: {reward:.2f}", True, white, black)
             screen.blit(reward_text, (10, 70))
 
             # display the vehicles
             for vehicle in simulation:
                 vehicle.render(screen)
+
+                # Zeichne die Scan-Zonen
+            for direction, config in DEFAULT_SCAN_ZONE_CONFIG.items():
+                # Zeichne die Zone als transparentes Rechteck
+                zone = config["zone"]
+                zone_rect = pygame.Rect(
+                    zone["x1"],
+                    zone["y1"],
+                    zone["x2"] - zone["x1"],
+                    zone["y2"] - zone["y1"],
+                )
+                zone_surface = pygame.Surface(
+                    (zone_rect.width, zone_rect.height), pygame.SRCALPHA
+                )
+                zone_surface.fill((0, 255, 0, 64))  # Rot mit 25% Transparenz
+                screen.blit(zone_surface, (zone_rect.x, zone_rect.y))
+
+                # Zeichne den Umriss des Rechtecks
+                pygame.draw.rect(screen, (0, 255, 0), zone_rect, 2)
+
+                # Zeichne die Kameraposition als Kreis
+                camera = config["camera"]
+                pygame.draw.circle(
+                    screen, (255, 255, 0), (camera["x"], camera["y"]), 10
+                )
+
+                # Optional: Beschriftung für jede Zone hinzufügen
+                direction_label = font.render(
+                    direction, True, (255, 255, 255), (0, 0, 0)
+                )
+                screen.blit(direction_label, (camera["x"] - 15, camera["y"] - 15))
             pygame.display.update()
 
         clock.tick(TICKS_PER_SECOND)
