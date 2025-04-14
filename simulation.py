@@ -3,9 +3,6 @@ import pygame
 import sys
 from simulation_config import *
 
-pygame.init()
-simulation = pygame.sprite.Group()
-
 
 SHOW_FPS = False  # Set to True to show frames per second
 TICKS_PER_SECOND = 1000000000  # Ticks per second in the simulation (simulation speed)
@@ -28,7 +25,7 @@ def reset_spawn_positions():
 
 
 # Entfernt Fahrzeuge, die außerhalb des Bildschirms sind
-def cleanup_vehicles(this_crossed_vehicles, this_unnecessary_co2_emission):
+def cleanup_vehicles(this_crossed_vehicles, this_unnecessary_co2_emission, simulation):
     vehicles_to_remove = []
     # Alle Fahrzeuge überprüfen
     for vehicle in simulation:
@@ -76,20 +73,8 @@ class TrafficSignal:
         self.signalText = ""
 
 
-# Initialization of signals with default values
-def initialize():
-    ts1 = TrafficSignal(0, defaultGreen[0])
-    signals.append(ts1)
-    ts2 = TrafficSignal(ts1.red + ts1.green, defaultGreen[1])
-    signals.append(ts2)
-    ts3 = TrafficSignal(defaultRed, defaultGreen[2])
-    signals.append(ts3)
-    ts4 = TrafficSignal(defaultRed, defaultGreen[3])
-    signals.append(ts4)
-
-
 class Vehicle(pygame.sprite.Sprite):
-    def __init__(self, lane, vehicleClass, direction_number, direction):
+    def __init__(self, lane, vehicleClass, direction_number, direction, simulation):
         pygame.sprite.Sprite.__init__(self)
         self.unnecessary_co2_emission = 0
         self.this_tick_unnecessary_co2_emission = 0
@@ -308,7 +293,7 @@ def update_traffic_lights_Values(
 
 
 # Generate a new vehicle based on simulation parameters
-def generateVehicle():
+def generateVehicle(simulation):
     vehicle_type = random.randint(0, 3)
     lane_number = random.randint(1, 2)
     direction_number = random.randint(0, 3)
@@ -317,6 +302,7 @@ def generateVehicle():
         vehicleTypes[vehicle_type],
         direction_number,
         directionNumbers[direction_number],
+        simulation,
     )
 
 
@@ -326,9 +312,23 @@ def calculate_reward(co2, crossed):
     return reward
 
 
+def get_state(vehicles):
+
+    return vehicles
+
+
 def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 10):
+    pygame.init()
+    simulation = pygame.sprite.Group()
     # Initialize traffic signals
-    initialize()
+    ts1 = TrafficSignal(0, defaultGreen[0])
+    signals.append(ts1)
+    ts2 = TrafficSignal(ts1.red + ts1.green, defaultGreen[1])
+    signals.append(ts2)
+    ts3 = TrafficSignal(defaultRed, defaultGreen[2])
+    signals.append(ts3)
+    ts4 = TrafficSignal(defaultRed, defaultGreen[3])
+    signals.append(ts4)
     # Setting background image i.e. image of intersection
     background = pygame.image.load("images/intersection.png")
 
@@ -347,6 +347,8 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
     clock = pygame.time.Clock()
     tick_count = 0
 
+    output_hist = []  # history of the output of the model
+
     # rewards
     crossed_vehicles = 0
     co2_emission = 0
@@ -363,7 +365,8 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         if tick_count % 400 == 0:
             contr = not contr
 
-        print("CONTROLER: ", contr)
+        #
+
         # show fps
         if SHOW_FPS:
             print("FPS: ", clock.get_fps())
@@ -371,10 +374,10 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         AI Traffic light LOGIC
         """
         # get a vectorized state of the current simulation state
-        # vectorized_state = get_current_state()
-        # get the predicted action from the AI model
-        # predicted_action = get_action(vectorized_state)
-        # Update the signals based on AI logic
+        state = get_state(simulation)
+        # get the controller output from the model
+        controller_output = contr  # Model.get_action(state, output_hist)
+        output_hist.append(controller_output)
         (
             northGreen,
             eastGreen,
@@ -384,7 +387,7 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
             switch_time,
             is_swtiching,
         ) = update_traffic_lights_Values(
-            contr, last_signal_state, switch_time, is_swtiching
+            controller_output, last_signal_state, switch_time, is_swtiching
         )
 
         """
@@ -393,7 +396,7 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         # Generate vehicles based on tick count
         tick_count += 1
         if tick_count % VEHICLE_SPAWN_INTERVAL == 0:
-            generateVehicle()
+            generateVehicle(simulation)
 
         # Move all vehicles
         for vehicle in simulation:
@@ -401,7 +404,7 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
 
         # Cleanup vehicles that have left the screen
         crossed_vehicles, co2_emission = cleanup_vehicles(
-            crossed_vehicles, co2_emission
+            crossed_vehicles, co2_emission, simulation
         )
         """
         Simulation logic ends here
