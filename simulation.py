@@ -7,8 +7,8 @@ pygame.init()
 simulation = pygame.sprite.Group()
 
 
-TRAINING = False  # Set to True for training mode
-TICKS_PER_SECOND = 100  # Ticks per second in the simulation (simulation speed)
+TRAINING = True  # Set to True for training mode
+TICKS_PER_SECOND = 100000  # Ticks per second in the simulation (simulation speed)
 VEHICLE_SPAWN_INTERVAL = 30  # Spawn vehicle every 60 ticks (1 second)
 
 
@@ -252,7 +252,9 @@ class Main:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
-
+        """
+        SIMULATION LOGIC
+        """
         # Update the signals based on tick count
         updateValues()
 
@@ -264,6 +266,12 @@ class Main:
         # Move all vehicles
         for vehicle in simulation:
             vehicle.move()
+        """
+            Simulation logic ends here
+        """
+        # show fps
+
+        print("FPS: ", clock.get_fps())
 
         # Rendering
         if not TRAINING:
@@ -297,7 +305,7 @@ class Main:
             for vehicle in simulation:
                 screen.blit(vehicle.image, [vehicle.x, vehicle.y])
             pygame.display.update()
-            clock.tick(TICKS_PER_SECOND)
+        clock.tick(TICKS_PER_SECOND)
 
 
 if __name__ == "__main__":
