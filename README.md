@@ -1,6 +1,3 @@
-<p align="center">
- <img height=350px src="./simulation-output.png" alt="Simulation output">
-</p>
 
 <h1 align="center">KI-gesteuerte Verkehrskreuzung</h1>
 
