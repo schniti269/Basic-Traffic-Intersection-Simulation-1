@@ -11,7 +11,7 @@ from simulation_config import DEFAULT_SCAN_ZONE_CONFIG, vehicleTypes
 
 class TDLearningModel(Model):
     """
-    A Temporal Difference (TD) Learning model for traffic signal control.
+    TD-Learning Modell für die Ampelsteuerung - krasse KI!
     """
 
     def __init__(
@@ -23,107 +23,107 @@ class TDLearningModel(Model):
         min_exploration_rate=0.01,
     ):
         super().__init__()
-        self.learning_rate = learning_rate  # Alpha: Learning rate
-        self.discount_factor = (
-            discount_factor  # Gamma: Discount factor for future rewards
-        )
+        self.learning_rate = learning_rate  # Alpha: Lern-Speed
+        self.discount_factor = discount_factor  # Gamma: Wie wichtig future Rewards sind
         self.exploration_rate = (
-            exploration_rate  # Epsilon: For exploration-exploitation tradeoff
+            exploration_rate  # Epsilon: Neues ausprobieren vs. altes nutzen
         )
-        self.exploration_decay = exploration_decay  # Decay rate for exploration
-        self.min_exploration_rate = min_exploration_rate  # Minimum exploration rate
+        self.exploration_decay = (
+            exploration_decay  # Wie schnell weniger ausprobiert wird
+        )
+        self.min_exploration_rate = min_exploration_rate  # Minimum Exploration-Rate
 
-        # Initialize Q-table as a dictionary for state-action pairs
+        # Q-Table als Dict für State-Action Paare
         self.q_table = {}
 
-        # Track previous state, action and reward for TD learning
+        # Track vorheriger State, Action und Reward für TD-Learning
         self.previous_state = None
         self.previous_action = None
         self.tick_counter = 0
-        self.min_action_duration = 200  # Minimum duration for an action in ticks
+        self.min_action_duration = 200  # Minimum Dauer für eine Action in Ticks
 
     def state_to_key(self, state):
         """
-        Convert the state dictionary to a hashable key for the Q-table.
-        Simplifies the state to make learning more effective.
+        State-Dict in hashbaren Key für Q-Table umwandeln.
+        Vereinfacht den State für besseres Lernen.
         """
-        # Create a simplified representation of the state
+        # Vereinfachte Version vom State bauen
         simplified_state = []
 
-        # Count total vehicles in each direction
+        # Fahrzeuge pro Richtung zählen
         for direction in ["right", "left", "up", "down"]:
             total = sum(state[direction].values())
             simplified_state.append(total)
 
-        # Add a component that reflects the ratio of north-south vs east-west traffic
+        # Nord-Süd vs Ost-West Verkehrsverhältnis checken
         ns_traffic = simplified_state[2] + simplified_state[3]  # up + down
         ew_traffic = simplified_state[0] + simplified_state[1]  # right + left
 
-        # Add a traffic ratio indicator (discretized)
+        # Verkehrsverhältnis-Indikator (diskretisiert)
         if ns_traffic == 0 and ew_traffic == 0:
             ratio = 0
         elif ns_traffic == 0:
-            ratio = 5  # Strongly favor east-west
+            ratio = 5  # Voll Ost-West Fokus
         elif ew_traffic == 0:
-            ratio = -5  # Strongly favor north-south
+            ratio = -5  # Voll Nord-Süd Fokus
         else:
             ratio = int(5 * (ew_traffic - ns_traffic) / (ew_traffic + ns_traffic))
 
         simplified_state.append(ratio)
 
-        # Convert to tuple for hashing
+        # In Tuple für Hashing umwandeln
         return tuple(simplified_state)
 
     def get_action(self, state, history):
         """
-        Choose an action based on the current state using the Q-table.
+        Action basierend auf aktuellem State mit Q-Table wählen.
 
         Args:
-            state (dict): A dictionary containing vehicle counts for each direction and type
-            history (list): A list of previous actions taken by the model
+            state (dict): Dict mit Fahrzeugzahlen für jede Richtung und Typ
+            history (list): Liste der letzten Actions vom Modell
 
         Returns:
-            bool: True for north-south green, False for east-west green
+            bool: True für Nord-Süd grün, False für Ost-West grün
         """
-        # Increment tick counter
+        # Tick-Zähler erhöhen
         self.tick_counter += 1
 
-        # If we haven't reached the minimum action duration, stick with the previous action
+        # Wenn Mindestdauer nicht erreicht, bleib bei vorheriger Action
         if (
             self.previous_action is not None
             and self.tick_counter < self.min_action_duration
         ):
             return self.previous_action
 
-        # Convert state to a hashable key
+        # State in hashbaren Key umwandeln
         state_key = self.state_to_key(state)
 
-        # If this state is not in the Q-table, add it
+        # Wenn State nicht in Q-Table, füg ihn hinzu
         if state_key not in self.q_table:
             self.q_table[state_key] = {
                 True: 0.0,
                 False: 0.0,
-            }  # Initialize Q-values for both actions
+            }  # Q-Werte für beide Actions initialisieren
 
-        # Choose between exploration and exploitation
+        # Zwischen Exploration und Exploitation wählen
         if random.random() < self.exploration_rate:
-            # Exploration: choose a random action
+            # Exploration: Random Action
             action = random.choice([True, False])
         else:
-            # Exploitation: choose the best action according to Q-table
+            # Exploitation: Beste Action laut Q-Table
             if self.q_table[state_key][True] > self.q_table[state_key][False]:
                 action = True
             elif self.q_table[state_key][False] > self.q_table[state_key][True]:
                 action = False
             else:
-                # If Q-values are equal, choose randomly
+                # Bei gleichen Q-Werten, random wählen
                 action = random.choice([True, False])
 
-        # Reset tick counter if the action changed
+        # Tick-Zähler zurücksetzen wenn Action gewechselt
         if self.previous_action != action:
             self.tick_counter = 0
 
-        # Store the current state and action for the next update
+        # Aktuellen State und Action für nächstes Update speichern
         self.previous_state = state_key
         self.previous_action = action
 
@@ -131,15 +131,15 @@ class TDLearningModel(Model):
 
     def update_q_value(self, state, action, reward, next_state):
         """
-        Update the Q-value for a state-action pair using the TD learning formula.
+        Q-Wert für State-Action Paar mit TD-Learning Formel updaten.
 
         Q(s,a) = Q(s,a) + α * [r + γ * max(Q(s',a')) - Q(s,a)]
 
         Args:
-            state: The state key
-            action: The action taken
-            reward: The reward received
-            next_state: The resulting state key
+            state: State-Key
+            action: Ausgeführte Action
+            reward: Erhaltener Reward
+            next_state: Resultierender State-Key
         """
         if state not in self.q_table:
             self.q_table[state] = {True: 0.0, False: 0.0}
@@ -147,28 +147,28 @@ class TDLearningModel(Model):
         if next_state not in self.q_table:
             self.q_table[next_state] = {True: 0.0, False: 0.0}
 
-        # Calculate the maximum Q-value for the next state
+        # Max Q-Wert für nächsten State berechnen
         max_next_q = max(self.q_table[next_state].values())
 
-        # Current Q-value
+        # Aktueller Q-Wert
         current_q = self.q_table[state][action]
 
-        # TD update formula
+        # TD-Update Formel
         new_q = current_q + self.learning_rate * (
             reward + self.discount_factor * max_next_q - current_q
         )
 
-        # Update the Q-value
+        # Q-Wert updaten
         self.q_table[state][action] = new_q
 
     def decay_exploration_rate(self):
-        """Decay the exploration rate to gradually shift from exploration to exploitation"""
+        """Exploration-Rate reduzieren - von Ausprobieren zu Ausnutzen wechseln"""
         self.exploration_rate = max(
             self.min_exploration_rate, self.exploration_rate * self.exploration_decay
         )
 
     def save_model(self, filename=None):
-        """Save the model to a file"""
+        """Model in Datei speichern"""
         if filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"td_model_{timestamp}.pkl"
@@ -189,7 +189,7 @@ class TDLearningModel(Model):
         print(f"Model saved to {filename}")
 
     def load_model(self, filename):
-        """Load the model from a file"""
+        """Model aus Datei laden"""
         with open(filename, "rb") as f:
             data = pickle.load(f)
             self.q_table = data["q_table"]
@@ -204,34 +204,34 @@ class TDLearningModel(Model):
 
 def train_model(episodes=100, ticks_per_episode=36000, save_interval=1):
     """
-    Train the TD learning model using the traffic simulation.
+    TD-Learning Model mit Traffic-Sim trainieren.
 
     Args:
-        episodes: Number of training episodes
-        ticks_per_episode: Number of ticks per episode
-        save_interval: Save the model every this many episodes
+        episodes: Anzahl der Training-Episoden
+        ticks_per_episode: Ticks pro Episode
+        save_interval: Model alle X Episoden speichern
 
     Returns:
-        The trained model
+        Das trainierte Model
     """
     model = TDLearningModel()
 
-    # Create directory for models if it doesn't exist
+    # Models-Ordner erstellen wenn nötig
     if not os.path.exists("models"):
         os.makedirs("models")
 
-    # Track rewards for evaluation
+    # Rewards für Auswertung tracken
     rewards_history = []
 
-    # Track overall training progress
+    # Gesamt-Trainingsfortschritt tracken
     total_start_time = datetime.now()
 
     print(f"Starting training for {episodes} episodes")
     for episode in range(1, episodes + 1):
-        # Calculate overall progress
+        # Gesamtfortschritt berechnen
         overall_progress = ((episode - 1) / episodes) * 100
 
-        # Create overall progress bar
+        # Fortschrittsbalken bauen
         bar_length = 20
         filled_length = int(bar_length * (episode - 1) // episodes)
         progress_bar = "#" * filled_length + "-" * (bar_length - filled_length)
@@ -240,7 +240,7 @@ def train_model(episodes=100, ticks_per_episode=36000, save_interval=1):
         print(f"Episode {episode}/{episodes}")
         episode_start_time = datetime.now()
 
-        # Run one episode of simulation
+        # Eine Episode simulieren
         reward = simulate(
             model,
             TRAINING=True,
@@ -251,7 +251,7 @@ def train_model(episodes=100, ticks_per_episode=36000, save_interval=1):
 
         episode_duration = (datetime.now() - episode_start_time).total_seconds()
 
-        # Calculate estimated time remaining
+        # Restzeit berechnen
         avg_episode_time = (datetime.now() - total_start_time).total_seconds() / episode
         est_time_remaining = avg_episode_time * (episodes - episode)
 
@@ -259,25 +259,25 @@ def train_model(episodes=100, ticks_per_episode=36000, save_interval=1):
         print(f"Episode duration: {episode_duration:.2f} seconds")
         print(f"Estimated time remaining: {est_time_remaining/60:.2f} minutes")
 
-        # Decay exploration rate
+        # Exploration-Rate reduzieren
         model.decay_exploration_rate()
         print(f"Current exploration rate: {model.exploration_rate:.4f}")
 
-        # Save model periodically
+        # Model regelmäßig speichern
         if episode % save_interval == 0:
             model.save_model(f"models/td_model_episode_{episode}.pkl")
 
-    # Print total training time
+    # Gesamttrainingszeit ausgeben
     total_duration = (datetime.now() - total_start_time).total_seconds()
     print(f"\nTotal training time: {total_duration/60:.2f} minutes")
 
-    # Save the final model
+    # Finales Model speichern
     model.save_model(f"models/td_model_final.pkl")
 
-    # Plot the rewards history
+    # Rewards-Verlauf plotten
     plot_rewards(rewards_history)
 
-    # Print training summary
+    # Training-Zusammenfassung
     print("\nTraining completed!")
     print(f"Final exploration rate: {model.exploration_rate:.4f}")
     print(
@@ -290,20 +290,20 @@ def train_model(episodes=100, ticks_per_episode=36000, save_interval=1):
 
 def evaluate_model(model_path, num_evaluations=5, ticks_per_evaluation=36000):
     """
-    Evaluate a trained model.
+    Trainiertes Model bewerten.
 
     Args:
-        model_path: Path to the saved model
-        num_evaluations: Number of evaluation runs
-        ticks_per_evaluation: Number of ticks per evaluation
+        model_path: Pfad zum gespeicherten Model
+        num_evaluations: Anzahl der Test-Runs
+        ticks_per_evaluation: Ticks pro Test
 
     Returns:
-        Average reward over all evaluations
+        Durchschnittlicher Reward über alle Tests
     """
     model = TDLearningModel()
     model.load_model(model_path)
 
-    # Set exploration rate to 0 for deterministic policy
+    # Exploration auf 0 setzen für deterministisches Verhalten
     model.exploration_rate = 0.0
 
     rewards = []
@@ -328,15 +328,15 @@ def evaluate_model(model_path, num_evaluations=5, ticks_per_evaluation=36000):
 
 def run_trained_model(model_path):
     """
-    Run a trained model in the simulation for visualization.
+    Trainiertes Model in der Sim laufen lassen zum Anschauen.
 
     Args:
-        model_path: Path to the saved model
+        model_path: Pfad zum gespeicherten Model
     """
     model = TDLearningModel()
     model.load_model(model_path)
 
-    # Set exploration rate to 0 for deterministic policy
+    # Exploration auf 0 für deterministisches Verhalten
     model.exploration_rate = 0.0
 
     print(f"Running model {model_path} in simulation")
@@ -346,12 +346,12 @@ def run_trained_model(model_path):
 
 def plot_rewards(rewards_history):
     """
-    Plot the rewards over episodes to visualize training progress.
+    Rewards über Episoden plotten um Trainingsfortschritt zu visualisieren.
 
     Args:
-        rewards_history: List of rewards from each training episode
+        rewards_history: Liste der Rewards aus jeder Training-Episode
     """
-    # Create directory for plots if it doesn't exist
+    # Plots-Ordner erstellen wenn nötig
     if not os.path.exists("plots"):
         os.makedirs("plots")
 
@@ -362,7 +362,7 @@ def plot_rewards(rewards_history):
     plt.ylabel("Total Reward")
     plt.grid(True)
 
-    # Add a smoothed trend line (moving average)
+    # Smoothed Trendlinie hinzufügen (gleitender Durchschnitt)
     if len(rewards_history) > 5:
         window_size = min(5, len(rewards_history) // 5)
         smoothed = np.convolve(
@@ -372,39 +372,35 @@ def plot_rewards(rewards_history):
             range(window_size, len(rewards_history) + 1), smoothed, "r-", linewidth=2
         )
 
-    # Save the plot
+    # Plot speichern
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     plt.savefig(f"plots/rewards_plot_{timestamp}.png")
     print(f"Rewards plot saved to plots/rewards_plot_{timestamp}.png")
 
-    # Show the plot (comment this out for headless environments)
+    # Plot anzeigen (für Headless-Environments auskommentieren)
     plt.show()
 
 
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="TD Learning for Traffic Signal Control"
-    )
+    parser = argparse.ArgumentParser(description="TD Learning für Ampelsteuerung")
     parser.add_argument(
         "--mode",
         type=str,
         default="train",
         choices=["train", "evaluate", "run"],
-        help="Mode: train, evaluate, or run",
+        help="Mode: train, evaluate, oder run",
     )
     parser.add_argument(
-        "--model", type=str, help="Path to model file (for evaluate and run modes)"
+        "--model", type=str, help="Pfad zur Model-Datei (für evaluate und run)"
     )
     parser.add_argument(
-        "--episodes", type=int, default=50, help="Number of training episodes"
+        "--episodes", type=int, default=50, help="Anzahl der Training-Episoden"
     )
+    parser.add_argument("--ticks", type=int, default=36000, help="Ticks pro Episode")
     parser.add_argument(
-        "--ticks", type=int, default=36000, help="Number of ticks per episode"
-    )
-    parser.add_argument(
-        "--save_interval", type=int, default=10, help="Save interval in episodes"
+        "--save_interval", type=int, default=10, help="Speicher-Intervall in Episoden"
     )
 
     args = parser.parse_args()
@@ -417,11 +413,11 @@ if __name__ == "__main__":
         )
     elif args.mode == "evaluate":
         if args.model is None:
-            print("Error: Model path required for evaluation mode")
+            print("Error: Model-Pfad für Evaluation-Mode benötigt")
         else:
             evaluate_model(args.model, ticks_per_evaluation=args.ticks)
     elif args.mode == "run":
         if args.model is None:
-            print("Error: Model path required for run mode")
+            print("Error: Model-Pfad für Run-Mode benötigt")
         else:
             run_trained_model(args.model)

@@ -1,45 +1,45 @@
 class Model:
     def __init__(self):
         """
-        Initialize the base model.
+        Basis-Model starten.
         """
         pass
 
     def get_action(self, state, history):
         """
-        Given a state and history of previous actions, return the action to take.
+        Check die Action basierend auf State und History.
 
         Args:
-            state (dict): A dictionary containing the current state of the traffic simulation
-            history (list): A list of previous actions taken by the model
+            state (dict): Aktueller Zustand der Traffic-Sim
+            history (list): Frühere Actions vom Model
 
         Returns:
-            bool: True for north-south green, False for east-west green
+            bool: True für Nord-Süd grün, False für Ost-West grün
         """
-        # Base implementation should be overridden by subclasses
-        raise NotImplementedError("Subclasses must implement get_action method")
+        # Muss von Unterklassen überschrieben werden!
+        raise NotImplementedError("Subklassen müssen get_action implementieren")
 
 
-# example of a model that flips its state every 400 ticks
+# Beispiel-Model das alle 400 Ticks flippt
 class FlippingModel(Model):
     """
-    A simple model that flips its state every 400 ticks.
+    Simple Ampel die alle 400 Ticks umschaltet.
     """
 
     def __init__(self):
         super().__init__()
         self.tick_counter = 400
-        self.current_state = True  # Start with north-south green
+        self.current_state = True  # Start mit Nord-Süd grün
 
     def get_action(self, state, history):
         """
-        Returns True (north-south green) or False (east-west green)
-        and flips the state every 400 ticks.
+        Gibt True (Nord-Süd grün) oder False (Ost-West grün) zurück
+        und flippt alle 400 Ticks.
         """
-        # Increment the tick counter
+        # Tick-Zähler erhöhen
         self.tick_counter += 1
 
-        # Check if it's time to flip the state
+        # Zeit zum Umschalten?
         if self.tick_counter >= 400:
             self.current_state = not self.current_state
             self.tick_counter = 0

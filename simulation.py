@@ -8,24 +8,24 @@ from vehicle import Vehicle, generateVehicle, cleanup_vehicles
 from traffic_signal import TrafficSignal, update_traffic_lights_Values
 
 
-SHOW_FPS = False  # Set to True to show frames per second
-TICKS_PER_SECOND = 1000000000  # Ticks per second in the simulation (simulation speed)
-VEHICLE_SPAWN_INTERVAL = 30  # Spawn vehicle every 60 ticks (1 second)
-ALL_RED_STATE_N_TICKS = 60  # Duration of all red state in ticks
-# rewardparams
-REWARD_CO2_MULTIPLIER = 1  # Multiplier for CO2 emission in reward calculation
-REWARD_CROSSED_MULTIPLIER = 90  # Multiplier for crossed vehicles in reward calculation
+SHOW_FPS = False  # Checke FPS an/aus - True zum Anzeigen
+TICKS_PER_SECOND = 1000000000  # Simulation-Speed in Ticks
+VEHICLE_SPAWN_INTERVAL = 30  # Alle 30 Ticks neuer Wagen
+ALL_RED_STATE_N_TICKS = 60  # Wie lang alles rot bleibt
+# Belohnungsparams
+REWARD_CO2_MULTIPLIER = 1  # CO2-Faktor für Score
+REWARD_CROSSED_MULTIPLIER = 90  # Faktor für durchgefahrene Autos
 # Bildschirmgrenzen mit zusätzlichem Puffer definieren
 
 
 def calculate_reward(co2, crossed):
-    # Calculate the reward based on CO2 emissions and crossed vehicles
+    # Belohnungsberechnung aus CO2 und durchgekommenen Fahrzeugen
     reward = (crossed * REWARD_CROSSED_MULTIPLIER) - (co2 * REWARD_CO2_MULTIPLIER)
     return reward
 
 
 def get_state(vehicles):
-    # Ergebnis-Dictionary für alle Scan-Zonen initialisieren
+    # Start-Dict für alle Scan-Zonen
     result = {
         "right": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
         "left": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
@@ -33,16 +33,16 @@ def get_state(vehicles):
         "up": {"car": 0, "bus": 0, "truck": 0, "bike": 0},
     }
 
-    # Für jede Scan-Zone prüfen, ob das Fahrzeug darin liegt
+    # Jede Zone checken
     for direction, config in DEFAULT_SCAN_ZONE_CONFIG.items():
         zone = config["zone"]
         zone_rect = pygame.Rect(
             zone["x1"], zone["y1"], zone["x2"] - zone["x1"], zone["y2"] - zone["y1"]
         )
 
-        # Für jedes Fahrzeug in der Simulation
+        # Alle Fahrzeuge durchgehen
         for vehicle in vehicles:
-            # Fahrzeugdimensionen bestimmen (Rechteck)
+            # Fahrzeug-Rechteck definieren
             vehicle_rect = pygame.Rect(
                 vehicle.x,
                 vehicle.y,
@@ -50,9 +50,9 @@ def get_state(vehicles):
                 vehicle.image.get_rect().height,
             )
 
-            # Überprüfen, ob das Fahrzeug mit der Zone überlappt
+            # Kollision checken
             if vehicle_rect.colliderect(zone_rect):
-                # Fahrzeugklasse zählen
+                # Fahrzeugtyp zählen
                 result[direction][vehicle.vehicleClass] += 1
 
     return result
@@ -61,7 +61,7 @@ def get_state(vehicles):
 def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 10):
     pygame.init()
     simulation = pygame.sprite.Group()
-    # Initialize traffic signals
+    # Ampeln initialisieren
     ts1 = TrafficSignal(0, defaultGreen[0])
     signals.append(ts1)
     ts2 = TrafficSignal(ts1.red + ts1.green, defaultGreen[1])
@@ -70,13 +70,13 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
     signals.append(ts3)
     ts4 = TrafficSignal(defaultRed, defaultGreen[3])
     signals.append(ts4)
-    # Setting background image i.e. image of intersection
+    # Hintergrundbild laden
     background = pygame.image.load("images/intersection.png")
 
     screen = pygame.display.set_mode(screenSize)
     pygame.display.set_caption("SIMULATION")
 
-    # Loading signal images and font
+    # Ampelbilder und Schrift laden
     redSignal = pygame.image.load("images/signals/red.png")
     greenSignal = pygame.image.load("images/signals/green.png")
     font = pygame.font.Font(None, 30)
@@ -88,22 +88,22 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
     clock = pygame.time.Clock()
     tick_count = 0
 
-    output_hist = []  # history of the output of the model
+    output_hist = []  # Historie der Model-Outputs
 
-    # rewards
+    # Belohnungen
     crossed_vehicles = 0
     co2_emission = 0
 
-    # Performance tracking
+    # Performance-Tracking
     start_time = time.time()
     last_update_time = start_time
     frames_since_last_update = 0
     iters_per_second = 0
 
-    # Progress tracking for training mode
-    progress_update_interval = 1000  # Update progress every 1000 ticks
+    # Progress-Tracking im Training
+    progress_update_interval = 1000  # Alle 1000 Ticks updaten
 
-    # Set unlimited speed for training mode
+    # Unbegrenzter Speed im Training-Mode
     actual_ticks_per_second = float("inf") if TRAINING else TICKS_PER_SECOND
 
     while tick_count < NO_OF_TICKS or not TRAINING:
@@ -112,15 +112,15 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
             if event.type == pygame.QUIT:
                 sys.exit()
 
-        # show fps
+        # FPS anzeigen
         if SHOW_FPS:
             print("FPS: ", clock.get_fps())
         """
-        AI Traffic light LOGIC
+        KI-Ampel-Logik
         """
-        # get a vectorized state of the current simulation state
+        # Aktuellen Simulations-State holen
         state = get_state(simulation)
-        # get the controller output from the model
+        # Controller-Output vom Model bekommen
         controller_output = Model.get_action(state, output_hist)
         output_hist.append(controller_output)
         (
@@ -140,17 +140,17 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
         )
 
         """
-        SIMULATION LOGIC
+        SIMULATIONS-LOGIK
         """
-        # Generate vehicles based on tick count
+        # Fahrzeuge generieren nach Tick-Count
         tick_count += 1
 
-        # Update performance metrics
+        # Performance-Metriken updaten
         frames_since_last_update += 1
         current_time = time.time()
         time_elapsed = current_time - last_update_time
 
-        # Calculate and display progress for training mode
+        # Progress im Training anzeigen
         if TRAINING and (
             tick_count % progress_update_interval == 0 or tick_count == NO_OF_TICKS
         ):
@@ -159,43 +159,43 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
                 frames_since_last_update / time_elapsed if time_elapsed > 0 else 0
             )
 
-            # Create progress bar
+            # Fortschrittsbalken bauen
             bar_length = 30
             filled_length = int(bar_length * tick_count // NO_OF_TICKS)
             bar = "#" * filled_length + "-" * (bar_length - filled_length)
 
-            # Print progress information
+            # Fortschritt printen
             print(
                 f"\rProgress: |{bar}| {progress_percent:.1f}% - Iterations/sec: {iters_per_second:.1f}",
                 end="",
             )
 
-            # Reset counters for next update
+            # Counter für nächstes Update resetten
             last_update_time = current_time
             frames_since_last_update = 0
 
         if tick_count % VEHICLE_SPAWN_INTERVAL == 0:
             generateVehicle(simulation)
 
-        # Move all vehicles
+        # Alle Fahrzeuge bewegen
         for vehicle in simulation:
             vehicle.move(northGreen, eastGreen, southGreen, westGreen)
 
-        # Cleanup vehicles that have left the screen
+        # Fahrzeuge außerhalb des Bildschirms entfernen
         crossed_vehicles, co2_emission = cleanup_vehicles(
             crossed_vehicles, co2_emission, simulation
         )
         """
-        Simulation logic ends here
+        Simulations-Logik endet hier
         """
-        """ REWARD CALCULATION 
+        """ BELOHNUNGS-BERECHNUNG 
         """
         reward = calculate_reward(co2_emission, crossed_vehicles)
 
         # Rendering
         if not TRAINING:
-            screen.blit(background, (0, 0))  # display background in simulation
-            # render the signals
+            screen.blit(background, (0, 0))  # Hintergrund anzeigen
+            # Ampeln rendern
             if northGreen == 1:
                 screen.blit(greenSignal, signalCoods[1])
             else:
@@ -213,7 +213,7 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
             else:
                 screen.blit(redSignal, signalCoods[2])
 
-            # display the co2 emission and crossed vehicles
+            # CO2 und Fahrzeug-Counter anzeigen
             co2_emission_text = font.render(
                 f"Co2: {co2_emission:.2f}g", True, white, black
             )
@@ -222,17 +222,17 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
                 f"Crossed Vehicles: {crossed_vehicles}", True, white, black
             )
             screen.blit(crossed_vehicles_text, (10, 40))
-            # display the reward
+            # Belohnung anzeigen
             reward_text = font.render(f"Reward: {reward:.2f}", True, white, black)
             screen.blit(reward_text, (10, 70))
 
-            # display the vehicles
+            # Fahrzeuge anzeigen
             for vehicle in simulation:
                 vehicle.render(screen)
 
-                # Zeichne die Scan-Zonen
+                # Scan-Zonen zeichnen
             for direction, config in DEFAULT_SCAN_ZONE_CONFIG.items():
-                # Zeichne die Zone als transparentes Rechteck
+                # Zone als transparentes Rechteck
                 zone = config["zone"]
                 zone_rect = pygame.Rect(
                     zone["x1"],
@@ -246,38 +246,37 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
                 zone_surface.fill((0, 255, 0, 64))  # Rot mit 25% Transparenz
                 screen.blit(zone_surface, (zone_rect.x, zone_rect.y))
 
-                # Zeichne den Umriss des Rechtecks
+                # Rechteck-Umriss zeichnen
                 pygame.draw.rect(screen, (0, 255, 0), zone_rect, 2)
 
-                # Zeichne die Kameraposition als Kreis
+                # Kamera als Kreis anzeigen
                 camera = config["camera"]
                 pygame.draw.circle(
                     screen, (255, 255, 0), (camera["x"], camera["y"]), 10
                 )
 
-                # Optional: Beschriftung für jede Zone hinzufügen
+                # Zonen-Label hinzufügen
                 direction_label = font.render(
                     direction, True, (255, 255, 255), (0, 0, 0)
                 )
                 screen.blit(direction_label, (camera["x"] - 15, camera["y"] - 15))
             pygame.display.update()
 
-        # Use unlimited FPS during training, or the specified TICKS_PER_SECOND otherwise
+        # Unbegrenzter FPS im Training, sonst mit TICKS_PER_SECOND
         clock.tick(actual_ticks_per_second)
 
-    # Print a newline after training progress display
+    # Newline nach Training-Progress
     if TRAINING:
-        print()  # Add a newline after the progress bar
+        print()  # Neue Zeile nach Fortschrittsbalken
 
-        # Calculate and display final statistics
+        # Finale Stats berechnen
         total_time = time.time() - start_time
         avg_iters_per_second = tick_count / total_time if total_time > 0 else 0
         print(f"Training completed in {total_time:.2f} seconds")
         print(f"Average iterations per second: {avg_iters_per_second:.1f}")
         print(f"Final reward: {reward:.2f}")
 
-    # do a post run cleanup by teleporting all vehicles off map and running cleanup_vehicles
-    # so that the vehicles are removed from the simulation
+    # Alle Fahrzeuge aus der Map teleportieren und aufräumen
     for vehicle in simulation:
         vehicle.x = -1000
         vehicle.y = -1000
@@ -292,16 +291,16 @@ def simulate(Model, TRAINING=False, TICKS_PER_SECOND=60, NO_OF_TICKS=60 * 60 * 1
 
 
 if __name__ == "__main__":
-    # Run the simulation
+    # Simulation starten
     from td_learning import TDLearningModel
 
-    # Create and load the model
+    # Model erstellen und laden
     my_model = TDLearningModel()
     my_model.load_model(
-        r"C:\Users\ian-s\Traffic_refactor\Basic-Traffic-Intersection-Simulation\models\td_model_final.pkl"
+        r"C:\Users\ian-s\Traffic_refactor\Basic-Traffic-Intersection-Simulation\models_old\td_model_final.pkl"
     )
 
-    # For evaluation, set exploration rate to 0
+    # Explorations-Rate auf 0 für Evaluation
     my_model.exploration_rate = 0.0
 
     simulate(my_model, TRAINING=False, TICKS_PER_SECOND=600)

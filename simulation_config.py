@@ -1,23 +1,23 @@
-# Default values of signal timers
+# Standard-Timer für Ampeln
 defaultGreen = {0: 10, 1: 10, 2: 10, 3: 10}
 defaultRed = 150
 
 
 signals = []
 noOfSignals = 4
-northGreen = 0  # Indicates which signal is currently green
-southGreen = 0  # Indicates which signal is currently green
-westGreen = 0  # Indicates which signal is currently green
-eastGreen = 0  # Indicates which signal is currently green
+northGreen = 0  # Welche Ampeln grad grün sind
+southGreen = 0  # Welche Ampeln grad grün sind
+westGreen = 0  # Welche Ampeln grad grün sind
+eastGreen = 0  # Welche Ampeln grad grün sind
 
 speeds = {
     "car": 3,
     "bus": 3,
     "truck": 3,
     "bike": 3,
-}  # average speeds of vehicles
+}  # Durchschnitts-Speed der Fahrzeuge
 
-# CO2 emission values for vehicles (in arbitrary units)
+# CO2-Werte für Fahrzeuge (ausgedachte Einheiten)
 co2_emissions = {
     "car": {"stopping": 0.3, "acceleration": 2.0, "waiting": 0.4},
     "bus": {"stopping": 0.6, "acceleration": 4.0, "waiting": 0.9},
@@ -26,7 +26,7 @@ co2_emissions = {
 }
 
 
-# Coordinates of vehicles' start
+# Startkoordinaten der Fahrzeuge
 x = {
     "right": [0, 0, 0],
     "down": [755, 727, 697],
@@ -49,23 +49,23 @@ vehicles = {
 vehicleTypes = {0: "car", 1: "bus", 2: "truck", 3: "bike"}
 directionNumbers = {0: "right", 1: "down", 2: "left", 3: "up"}
 
-# Coordinates of signal image, timer, and vehicle count
+# Koordinaten für Ampelbild, Timer und Fahrzeugzähler
 signalCoods = [(530, 230), (810, 230), (810, 570), (530, 570)]
 signalTimerCoods = [(530, 210), (810, 210), (810, 550), (530, 550)]
 
-# Coordinates of stop lines
+# Koordinaten der Stopplinien
 stopLines = {"right": 590, "down": 330, "left": 800, "up": 535}
 defaultStop = {"right": 580, "down": 320, "left": 810, "up": 545}
 # stops = {'right': [580,580,580], 'down': [320,320,320], 'left': [810,810,810], 'up': [545,545,545]}
 
-# Gap between vehicles
-stoppingGap = 15  # stopping gap
-movingGap = 15  # moving gap
+# Abstand zwischen Fahrzeugen
+stoppingGap = 15  # Abstand beim Stoppen
+movingGap = 15  # Abstand bei Bewegung
 
 
 SCREEN_BOUNDS = {"left": -200, "right": 1600, "top": -200, "bottom": 1000}
 
-# Ursprüngliche Startpositionen speichern
+# Original-Startpositionen für Reset
 original_x = {
     "right": [0, 0, 0],
     "down": [755, 727, 697],
@@ -80,11 +80,11 @@ original_y = {
 }
 
 
-# Colours
+# Farben
 black = (0, 0, 0)
 white = (255, 255, 255)
 
-# Screensize
+# Bildschirmgröße
 screenWidth = 1400
 screenHeight = 800
 screenSize = (screenWidth, screenHeight)
@@ -92,50 +92,50 @@ screenSize = (screenWidth, screenHeight)
 DEFAULT_SCAN_ZONE_CONFIG = {
     "right": {
         "zone": {
-            "x1": 811,  # Left edge
-            "y1": 427,  # Top edge
-            "x2": 1400,  # Right edge
-            "y2": 512,  # Bottom edge
+            "x1": 811,  # Linke Kante
+            "y1": 427,  # Obere Kante
+            "x2": 1400,  # Rechte Kante
+            "y2": 512,  # Untere Kante
         },
         "camera": {
-            "x": 787,  # Camera x position
-            "y": 464,  # Camera y position
+            "x": 787,  # Kamera X-Pos
+            "y": 464,  # Kamera Y-Pos
         },
     },
     "left": {
         "zone": {
-            "x1": 0,  # Left edge
-            "y1": 370,  # Top edge
-            "x2": 580,  # Right edge
-            "y2": 424,  # Bottom edge
+            "x1": 0,  # Linke Kante
+            "y1": 370,  # Obere Kante
+            "x2": 580,  # Rechte Kante
+            "y2": 424,  # Untere Kante
         },
         "camera": {
-            "x": 600,  # Camera x position
-            "y": 400,  # Camera y position
+            "x": 600,  # Kamera X-Pos
+            "y": 400,  # Kamera Y-Pos
         },
     },
     "down": {
         "zone": {
-            "x1": 600,  # Left edge
-            "y1": 546,  # Top edge
-            "x2": 681,  # Right edge
-            "y2": 800,  # Bottom edge
+            "x1": 600,  # Linke Kante
+            "y1": 546,  # Obere Kante
+            "x2": 681,  # Rechte Kante
+            "y2": 800,  # Untere Kante
         },
         "camera": {
-            "x": 650,  # Camera x position
-            "y": 530,  # Camera y position
+            "x": 650,  # Kamera X-Pos
+            "y": 530,  # Kamera Y-Pos
         },
     },
     "up": {
         "zone": {
-            "x1": 688,  # Left edge
-            "y1": 0,  # Top edge
-            "x2": 767,  # Right edge
-            "y2": 321,  # Bottom edge
+            "x1": 688,  # Linke Kante
+            "y1": 0,  # Obere Kante
+            "x2": 767,  # Rechte Kante
+            "y2": 321,  # Untere Kante
         },
         "camera": {
-            "x": 730,  # Camera x position
-            "y": 320,  # Camera y position
+            "x": 730,  # Kamera X-Pos
+            "y": 320,  # Kamera Y-Pos
         },
     },
 }
